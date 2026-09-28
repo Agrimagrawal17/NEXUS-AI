@@ -14,7 +14,11 @@ TARGET_KEYWORDS = [
     "revenue",
     "profit",
     "churn",
-    "status"
+    "status",
+    "close",
+    "amount",
+    "value",
+    "score"
 ]
 
 
@@ -24,27 +28,25 @@ def calculate_target_score(
 ) -> float:
 
     score = 0
-
     name = column_name.lower()
 
-    # 1. Column name signal
+    # 1. Column name check
     for keyword in TARGET_KEYWORDS:
         if keyword in name:
             score += 40
             break
 
-    # 2. Avoid obvious ID columns
+    # 2. ID columns should not normally be targets
     if "id" in name:
         score -= 40
 
-    # 3. Target should not be completely unique
+    # 3. Very high unique ratio can indicate ID-like columns
     unique_ratio = series.nunique() / max(len(series), 1)
 
     if unique_ratio < 0.5:
         score += 20
 
-    # 4. Too many unique values is usually not a target
-    if unique_ratio > 0.95:
+    if unique_ratio > 0.95 and "id" in name:
         score -= 30
 
     # Keep score between 0 and 100
@@ -69,12 +71,13 @@ def detect_target(df: pd.DataFrame) -> dict:
             "score": score
         })
 
+    # Highest score first
     candidates.sort(
         key=lambda x: x["score"],
         reverse=True
     )
 
-    if candidates and candidates[0]["score"] > 40:
+    if candidates and candidates[0]["score"] >= 40:
 
         return {
             "target_found": True,

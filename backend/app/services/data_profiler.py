@@ -1,5 +1,7 @@
 import pandas as pd
 from app.ml.target_detector import detect_target
+from app.ml.task_detector import detect_task
+
 
 def detect_column_type(series: pd.Series) -> str:
     """
@@ -17,10 +19,6 @@ def detect_column_type(series: pd.Series) -> str:
     # Datetime
     if pd.api.types.is_datetime64_any_dtype(series):
         return "datetime"
-    
-    
-    
-    
 
     # Object / text columns
     if series.dtype == "object":
@@ -150,6 +148,20 @@ def profile_dataset(file_path: str) -> dict:
     # Target detection
     target_info = detect_target(df)
 
+    # Task detection
+    task_info = None
+
+    if target_info["target_found"]:
+        target_column = target_info["target_column"]
+
+        task = detect_task(
+            df[target_column]
+        )
+
+        task_info = {
+            "task": task
+        }
+
     profile = {
         "rows": len(df),
         "columns": len(df.columns),
@@ -160,8 +172,8 @@ def profile_dataset(file_path: str) -> dict:
         "columns_info": columns,
         "data_quality": calculate_data_quality(df),
 
-        # NEW
-        "target_detection": target_info
+        "target_detection": target_info,
+        "task_detection": task_info
     }
 
     return profile
