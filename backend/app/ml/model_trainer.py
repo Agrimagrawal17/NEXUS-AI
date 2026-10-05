@@ -80,9 +80,7 @@ def sample_data(
     total_rows = len(X)
 
     if total_rows <= MAX_TRAIN_ROWS:
-
         return X, y
-
 
     print(
         f"Large dataset detected: {total_rows} rows"
@@ -91,7 +89,6 @@ def sample_data(
     print(
         f"Sampling {MAX_TRAIN_ROWS} rows for training"
     )
-
 
     # -----------------------------------------------------
     # Classification
@@ -142,7 +139,6 @@ def sample_data(
                 y_series.loc[sampled_indexes]
             )
 
-
     # -----------------------------------------------------
     # Regression / fallback
     # -----------------------------------------------------
@@ -161,6 +157,57 @@ def sample_data(
         X.iloc[indexes],
         y.iloc[indexes]
     )
+
+
+# =========================================================
+# MODEL RANKING
+# =========================================================
+
+def rank_models(
+    results,
+    metric,
+    higher_is_better=True
+):
+
+    successful_models = {
+        name: result
+        for name, result in results.items()
+        if result.get("status") == "success"
+    }
+
+    if not successful_models:
+
+        return []
+
+    ranked = sorted(
+        successful_models.items(),
+        key=lambda item: item[1].get(
+            metric,
+            -np.inf if higher_is_better else np.inf
+        ),
+        reverse=higher_is_better
+    )
+
+    ranking = []
+
+    for position, (name, result) in enumerate(
+        ranked,
+        start=1
+    ):
+
+        ranking.append({
+
+            "rank": position,
+
+            "model": name,
+
+            "metric": metric,
+
+            "score": result.get(metric)
+
+        })
+
+    return ranking
 
 
 # =========================================================
@@ -228,7 +275,6 @@ def train_regression_models(
             )
     }
 
-
     # -----------------------------------------------------
     # Large Dataset Sampling
     # -----------------------------------------------------
@@ -239,7 +285,6 @@ def train_regression_models(
         "regression"
     )
 
-
     results = {}
 
     best_model = None
@@ -247,7 +292,6 @@ def train_regression_models(
     best_model_name = None
 
     best_r2 = -np.inf
-
 
     # -----------------------------------------------------
     # Train Models
@@ -257,22 +301,23 @@ def train_regression_models(
 
         try:
 
+            print(
+                f"Training regression model: {name}"
+            )
+
             model.fit(
                 X_train_sampled,
                 y_train_sampled
             )
 
-
             predictions = model.predict(
                 X_test
             )
-
 
             mae = mean_absolute_error(
                 y_test,
                 predictions
             )
-
 
             rmse = np.sqrt(
                 mean_squared_error(
@@ -281,12 +326,10 @@ def train_regression_models(
                 )
             )
 
-
             r2 = r2_score(
                 y_test,
                 predictions
             )
-
 
             results[name] = {
 
@@ -297,8 +340,8 @@ def train_regression_models(
                 "RMSE": float(rmse),
 
                 "R2": float(r2)
-            }
 
+            }
 
             # -------------------------------------------------
             # Best Model
@@ -312,27 +355,41 @@ def train_regression_models(
 
                 best_model_name = name
 
-
         except Exception as error:
+
+            print(
+                f"Model failed: {name}"
+            )
 
             results[name] = {
 
                 "status": "failed",
 
                 "error": str(error)
+
             }
 
+    # =====================================================
+    # MODEL RANKING
+    # =====================================================
+
+    ranking = rank_models(
+        results,
+        metric="R2",
+        higher_is_better=True
+    )
 
     # =====================================================
     # SAVE BEST MODEL ARTIFACT
     # =====================================================
+
+    model_path = None
 
     if best_model is not None:
 
         safe_name = make_safe_model_name(
             best_model_name
         )
-
 
         model_path = save_model_artifact(
 
@@ -347,9 +404,9 @@ def train_regression_models(
             target_column=target_column,
 
             task=task,
+
             preprocessing_metadata=preprocessing_metadata
         )
-
 
         print(
             f"Best regression model: {best_model_name}"
@@ -363,8 +420,48 @@ def train_regression_models(
             f"Model artifact saved: {model_path}"
         )
 
+    # =====================================================
+    # MODEL SELECTION SUMMARY
+    # =====================================================
 
-    return results
+    successful_count = sum(
+        1
+        for result in results.values()
+        if result.get("status") == "success"
+    )
+
+    failed_count = sum(
+        1
+        for result in results.values()
+        if result.get("status") == "failed"
+    )
+
+    selection_summary = {
+
+        "best_model": best_model_name,
+
+        "metric": "R2",
+
+        "score": (
+            float(best_r2)
+            if best_model is not None
+            else None
+        ),
+
+        "models_tested": len(models),
+
+        "models_successful": successful_count,
+
+        "models_failed": failed_count,
+
+        "ranking": ranking
+
+    }
+
+    return {
+        "results": results,
+        "selection": selection_summary
+    }
 
 
 # =========================================================
@@ -381,7 +478,8 @@ def train_classification_models(
     preprocessor=None,
     feature_names=None,
     target_column=None,
-    task="classification"
+    task="classification",
+    preprocessing_metadata=None
 ):
 
     models = {
@@ -433,7 +531,6 @@ def train_classification_models(
             SVC()
     }
 
-
     # -----------------------------------------------------
     # Large Dataset Sampling
     # -----------------------------------------------------
@@ -444,7 +541,6 @@ def train_classification_models(
         "classification"
     )
 
-
     results = {}
 
     best_model = None
@@ -452,7 +548,6 @@ def train_classification_models(
     best_model_name = None
 
     best_f1 = -np.inf
-
 
     # -----------------------------------------------------
     # Train Models
@@ -462,22 +557,23 @@ def train_classification_models(
 
         try:
 
+            print(
+                f"Training classification model: {name}"
+            )
+
             model.fit(
                 X_train_sampled,
                 y_train_sampled
             )
 
-
             predictions = model.predict(
                 X_test
             )
-
 
             accuracy = accuracy_score(
                 y_test,
                 predictions
             )
-
 
             precision = precision_score(
                 y_test,
@@ -486,7 +582,6 @@ def train_classification_models(
                 zero_division=0
             )
 
-
             recall = recall_score(
                 y_test,
                 predictions,
@@ -494,14 +589,12 @@ def train_classification_models(
                 zero_division=0
             )
 
-
             f1 = f1_score(
                 y_test,
                 predictions,
                 average="weighted",
                 zero_division=0
             )
-
 
             results[name] = {
 
@@ -522,8 +615,8 @@ def train_classification_models(
                 "F1": float(
                     f1
                 )
-            }
 
+            }
 
             # -------------------------------------------------
             # Best Model
@@ -537,27 +630,41 @@ def train_classification_models(
 
                 best_model_name = name
 
-
         except Exception as error:
+
+            print(
+                f"Model failed: {name}"
+            )
 
             results[name] = {
 
                 "status": "failed",
 
                 "error": str(error)
+
             }
 
+    # =====================================================
+    # MODEL RANKING
+    # =====================================================
+
+    ranking = rank_models(
+        results,
+        metric="F1",
+        higher_is_better=True
+    )
 
     # =====================================================
     # SAVE BEST MODEL ARTIFACT
     # =====================================================
+
+    model_path = None
 
     if best_model is not None:
 
         safe_name = make_safe_model_name(
             best_model_name
         )
-
 
         model_path = save_model_artifact(
 
@@ -571,9 +678,10 @@ def train_classification_models(
 
             target_column=target_column,
 
-            task=task
-        )
+            task=task,
 
+            preprocessing_metadata=preprocessing_metadata
+        )
 
         print(
             f"Best classification model: {best_model_name}"
@@ -587,8 +695,48 @@ def train_classification_models(
             f"Model artifact saved: {model_path}"
         )
 
+    # =====================================================
+    # MODEL SELECTION SUMMARY
+    # =====================================================
 
-    return results
+    successful_count = sum(
+        1
+        for result in results.values()
+        if result.get("status") == "success"
+    )
+
+    failed_count = sum(
+        1
+        for result in results.values()
+        if result.get("status") == "failed"
+    )
+
+    selection_summary = {
+
+        "best_model": best_model_name,
+
+        "metric": "F1",
+
+        "score": (
+            float(best_f1)
+            if best_model is not None
+            else None
+        ),
+
+        "models_tested": len(models),
+
+        "models_successful": successful_count,
+
+        "models_failed": failed_count,
+
+        "ranking": ranking
+
+    }
+
+    return {
+        "results": results,
+        "selection": selection_summary
+    }
 
 
 # =========================================================
@@ -608,16 +756,16 @@ def select_best_classification_model(
         if result.get("status") == "success"
     }
 
-
     if not successful_models:
 
         return {
 
             "status": "failed",
 
-            "message": "No classification model trained successfully"
-        }
+            "message":
+                "No classification model trained successfully"
 
+        }
 
     best_name = max(
 
@@ -625,13 +773,12 @@ def select_best_classification_model(
 
         key=lambda name:
         successful_models[name]["F1"]
-    )
 
+    )
 
     best_result = successful_models[
         best_name
     ]
-
 
     return {
 
@@ -648,6 +795,7 @@ def select_best_classification_model(
         "Precision": best_result["Precision"],
 
         "Recall": best_result["Recall"]
+
     }
 
 
@@ -668,16 +816,16 @@ def select_best_regression_model(
         if result.get("status") == "success"
     }
 
-
     if not successful_models:
 
         return {
 
             "status": "failed",
 
-            "message": "No regression model trained successfully"
-        }
+            "message":
+                "No regression model trained successfully"
 
+        }
 
     best_name = max(
 
@@ -685,13 +833,12 @@ def select_best_regression_model(
 
         key=lambda name:
         successful_models[name]["R2"]
-    )
 
+    )
 
     best_result = successful_models[
         best_name
     ]
-
 
     return {
 
@@ -706,4 +853,5 @@ def select_best_regression_model(
         "MAE": best_result["MAE"],
 
         "RMSE": best_result["RMSE"]
+
     }

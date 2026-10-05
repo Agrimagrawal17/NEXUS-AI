@@ -10,9 +10,7 @@ from app.ml.task_detector import detect_task
 
 from app.ml.model_trainer import (
     train_regression_models,
-    train_classification_models,
-    select_best_classification_model,
-    select_best_regression_model
+    train_classification_models
 )
 
 import tempfile
@@ -160,40 +158,27 @@ async def analyze_dataset(
             # Step 7: Select Best Regression Model
             # ---------------------------------------------
 
-            best_model = select_best_regression_model(
-                model_results
-            )
+            best_model = model_results["selection"]
 
 
         else:
 
             model_results = train_classification_models(
-
-                X_train,
-
-                X_test,
-
-                y_train,
-
-                y_test,
-
-                preprocessor=preprocessor,
-
-                feature_names=feature_names,
-
-                target_column=target_column,
-
-                task=task
-            )
+    X_train, X_test, y_train, y_test,
+    preprocessor=preprocessor,
+    feature_names=feature_names,
+    target_column=target_column,
+    
+    task=task,
+    preprocessing_metadata=preprocessing_metadata
+)
 
 
             # ---------------------------------------------
             # Step 7: Select Best Classification Model
             # ---------------------------------------------
 
-            best_model = select_best_classification_model(
-                model_results
-            )
+            best_model = model_results["selection"]
 
 
         # -------------------------------------------------

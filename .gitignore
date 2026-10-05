@@ -9,3 +9,5 @@ env/
 
 .env
 *.log
+
+classification_test.csv
