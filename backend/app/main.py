@@ -1,5 +1,10 @@
 from fastapi import FastAPI, UploadFile, File
 import pandas as pd
+from app.ml.model_registry import (
+    list_models,
+    get_model,
+    delete_model
+)
 
 from app.services.prediction_service import predict_with_model
 from app.services.data_profiler import profile_dataset
@@ -308,3 +313,79 @@ async def predict(
             "status": "failed",
             "error": str(error)
         }
+        
+# =========================================================
+# MODEL REGISTRY APIs
+# =========================================================
+
+@app.get("/models")
+def get_registered_models():
+
+    return {
+        "status": "success",
+        "models": list_models()
+    }
+
+
+@app.get("/models/{model_name}")
+def get_registered_model(model_name: str):
+
+    model = get_model(model_name)
+
+    if model is None:
+
+        return {
+            "status": "error",
+            "message": f"Model not found: {model_name}"
+        }
+
+    return {
+        "status": "success",
+        "model": model
+    }
+
+
+@app.delete("/models/{model_name}")
+def remove_registered_model(model_name: str):
+
+    deleted = delete_model(
+        model_name
+    )
+
+    if not deleted:
+
+        return {
+            "status": "error",
+            "message": f"Model not found: {model_name}"
+        }
+
+    return {
+        "status": "success",
+        "message": f"Model deleted from registry: {model_name}"
+    }
+
+# =========================================================
+# BEST MODEL API
+# =========================================================
+
+@app.get("/best-model")
+def get_best_model():
+
+    models = list_models()
+
+    if not models:
+
+        return {
+            "status": "error",
+            "message": "No registered models found"
+        }
+
+    best_model = max(
+        models,
+        key=lambda model: model.get("score", float("-inf"))
+    )
+
+    return {
+        "status": "success",
+        "best_model": best_model
+    }

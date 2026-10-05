@@ -42,6 +42,7 @@ from sklearn.metrics import (
 )
 
 from app.ml.model_store import save_model_artifact
+from app.ml.model_registry import register_model
 
 
 # =========================================================
@@ -380,7 +381,7 @@ def train_regression_models(
     )
 
     # =====================================================
-    # SAVE BEST MODEL ARTIFACT
+    # SAVE + REGISTER BEST MODEL
     # =====================================================
 
     model_path = None
@@ -408,6 +409,25 @@ def train_regression_models(
             preprocessing_metadata=preprocessing_metadata
         )
 
+        # -------------------------------------------------
+        # Register Best Regression Model
+        # -------------------------------------------------
+
+        register_model(
+
+            model_name=safe_name,
+
+            model_path=model_path,
+
+            task=task,
+
+            target_column=target_column,
+
+            metric="R2",
+
+            score=float(best_r2)
+        )
+
         print(
             f"Best regression model: {best_model_name}"
         )
@@ -418,6 +438,10 @@ def train_regression_models(
 
         print(
             f"Model artifact saved: {model_path}"
+        )
+
+        print(
+            f"Model registered: {safe_name}"
         )
 
     # =====================================================
@@ -655,7 +679,7 @@ def train_classification_models(
     )
 
     # =====================================================
-    # SAVE BEST MODEL ARTIFACT
+    # SAVE + REGISTER BEST MODEL
     # =====================================================
 
     model_path = None
@@ -683,6 +707,25 @@ def train_classification_models(
             preprocessing_metadata=preprocessing_metadata
         )
 
+        # -------------------------------------------------
+        # Register Best Classification Model
+        # -------------------------------------------------
+
+        register_model(
+
+            model_name=safe_name,
+
+            model_path=model_path,
+
+            task=task,
+
+            target_column=target_column,
+
+            metric="F1",
+
+            score=float(best_f1)
+        )
+
         print(
             f"Best classification model: {best_model_name}"
         )
@@ -693,6 +736,10 @@ def train_classification_models(
 
         print(
             f"Model artifact saved: {model_path}"
+        )
+
+        print(
+            f"Model registered: {safe_name}"
         )
 
     # =====================================================
