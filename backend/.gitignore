@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.pyo
+
+.env
+.venv/
+venv/
+
+# Backup / temporary files
+*_backup.py
+*_before_pipeline.py
+*_v1_backup.py
+
+# Local trained model artifacts
+app/saved_models/
